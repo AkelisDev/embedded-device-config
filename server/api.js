@@ -1,5 +1,5 @@
-import { json, readBody, assertValid, HttpError } from './http.js';
-import { parseConfig, serializeConfig } from '../shared/convert.js';
+import { json as sendJson, readBody, assertValid, HttpError } from './http.js';
+import { parseConfig } from '../shared/convert.js';
 import { checkChannel, checkStation, checkDatapoints } from '../shared/validate.js';
 import { nextId } from '../shared/modbus.js';
 
@@ -21,6 +21,10 @@ function pick(obj, keys) {
 }
 
 export function createApi(store) {
+  // ETag lets the UI send If-Match on save, so it can't overwrite changes
+  // made while it was disconnected
+  const json = (res, status, body) => sendJson(res, status, body, { ETag: `"${store.revision}"` });
+
   function getChannel(id) {
     const ch = store.channel(id);
     if (!ch) throw new HttpError(404, 'Channel not found');
@@ -128,9 +132,10 @@ export function createApi(store) {
   async function exportConfig(req, res) {
     res.writeHead(200, {
       'Content-Type': 'application/json',
+      ETag: `"${store.revision}"`,
       'Content-Disposition': 'attachment; filename="modbus_config.json"',
     });
-    res.end(JSON.stringify(serializeConfig(store.channels), null, 4));
+    res.end(store.serialize());
   }
 
   async function importConfig(req, res) {

@@ -25,3 +25,6 @@ export function nextId(items) {
   for (const item of items) max = Math.max(max, Number(item.id) || 0);
   return String(max + 1);
 }
+
+// Identifies one register's value in the live stream and history
+export const valueKey = (ch, st, dp) => `${ch.id}/${st.id}/${dp.id}`;

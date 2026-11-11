@@ -1,5 +1,7 @@
 // The device firmware reads modbus_config.json as is (every value is a string),
 // so the file keeps its format and we only convert at the API boundary.
+// Keys are written in the order the device itself uses, so a saved file diffs
+// cleanly against one taken from the device.
 
 import { DATA_TYPES } from './modbus.js';
 
@@ -22,13 +24,13 @@ function readDatapoint(d) {
 
 function writeDatapoint(d) {
   return {
-    id: String(d.id),
-    start_addr: String(d.startAddr),
-    reg_size: String(DATA_TYPES[d.dataType] ?? d.regSize),
-    data_type: d.dataType,
-    byte_order: d.byteOrder,
-    func_code: String(d.funcCode),
     acq_cycle: String(d.acqCycle),
+    byte_order: d.byteOrder,
+    data_type: d.dataType,
+    func_code: String(d.funcCode),
+    id: String(d.id),
+    reg_size: String(DATA_TYPES[d.dataType] ?? d.regSize),
+    start_addr: String(d.startAddr),
     meta: { descr: d.description, scale: String(d.scale), units: d.units },
   };
 }
@@ -80,29 +82,28 @@ function readChannel(c, type) {
 }
 
 function writeChannel(c) {
-  const out = {
+  const connection = c.type === 'tcp'
+    ? { tcp_host: c.host, tcp_port: String(c.port) }
+    : {
+        ser_port: c.serialPort,
+        baudrate: String(c.baudrate),
+        stopbits: String(c.stopbits),
+        bytesize: String(c.bytesize),
+        parity: c.parity,
+      };
+
+  return {
     channel_id: c.channelId,
     name: c.name,
     conn_type: c.type,
+    ...connection,
     request_retries: String(c.requestRetries),
     request_timeout: String(c.requestTimeout),
     connect_retries: String(c.connectRetries),
     connect_timeout: String(c.connectTimeout),
     enable: String(!!c.enabled),
+    stations: c.stations.map(writeStation),
   };
-
-  if (c.type === 'tcp') {
-    out.tcp_host = c.host;
-    out.tcp_port = String(c.port);
-  } else {
-    out.ser_port = c.serialPort;
-    out.baudrate = String(c.baudrate);
-    out.stopbits = String(c.stopbits);
-    out.bytesize = String(c.bytesize);
-    out.parity = c.parity;
-  }
-  out.stations = c.stations.map(writeStation);
-  return out;
 }
 
 export function parseConfig(file) {
