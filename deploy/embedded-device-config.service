@@ -1,0 +1,21 @@
+# Copy to /etc/systemd/system/, then: systemctl enable --now embedded-device-config
+[Unit]
+Description=Modbus gateway configuration UI
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/embedded-device-config
+Environment=PORT=8080
+# Outside the install folder, so installing a new release keeps the device's config
+Environment=CONFIG=/var/lib/embedded-device-config/modbus_config.json
+StateDirectory=embedded-device-config
+ExecStartPre=/bin/sh -c 'test -f "$CONFIG" || cp data/modbus_config.json "$CONFIG"'
+ExecStart=/usr/bin/node server/index.js
+Restart=always
+RestartSec=2
+DynamicUser=yes
+# Serial ports for Modbus RTU
+SupplementaryGroups=dialout
+
+[Install]
+WantedBy=multi-user.target

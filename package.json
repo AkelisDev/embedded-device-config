@@ -2,10 +2,14 @@
   "name": "embedded-device-config",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "start": "node server/index.js",
     "dev": "vite web",
-    "build": "vue-tsc --noEmit -p web && vite build web"
+    "build": "vue-tsc --noEmit -p web && vite build web && node scripts/compress.js",
+    "release": "npm run build && node scripts/release.js"
   },
   "dependencies": {
     "uplot": "1.6",
