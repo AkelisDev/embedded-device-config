@@ -17,6 +17,8 @@ export const FUNC_CODES = {
 export const BYTE_ORDERS = ['ABCD', 'CDAB', 'BADC', 'DCBA'];
 export const BAUDRATES = [1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200];
 export const PARITIES = ['N', 'E', 'O'];
+// RS-485 ports on the gateway
+export const SERIAL_PORTS = ['/dev/ttyS2', '/dev/ttyS3'];
 
 export const regCount = (dp) => DATA_TYPES[dp.dataType] ?? dp.regSize ?? 1;
 

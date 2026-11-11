@@ -2,25 +2,14 @@
 // the config maps onto it. Values are physically consistent (P = V * I * pf,
 // energy is the integral of power) so the monitor looks like a real meter.
 
+import { classify } from '../shared/quantity.js';
+
 const MINUTE = 60_000;
 
 const wave = (t, period, phase = 0) => Math.sin((2 * Math.PI * t) / period + phase);
 const noise = (amp) => (Math.random() * 2 - 1) * amp;
 const sum = (a) => a[0] + a[1] + a[2];
 const avg = (a) => sum(a) / 3;
-
-// Units in the field are inconsistent ("Volts" vs "V"), so match loosely.
-// The factor converts from the model's base unit to the register's unit.
-const UNITS = {
-  v: ['voltage', 1], volts: ['voltage', 1],
-  a: ['current', 1], amps: ['current', 1],
-  w: ['power', 1], kw: ['power', 1e-3],
-  va: ['apparent', 1], kva: ['apparent', 1e-3],
-  var: ['reactive', 1], kvar: ['reactive', 1e-3],
-  wh: ['energy', 1], kwh: ['energy', 1e-3],
-  varh: ['reactiveEnergy', 1], kvarh: ['reactiveEnergy', 1e-3],
-  hz: ['frequency', 1],
-};
 
 const INT_RANGES = {
   int16: [-32768, 32767],
@@ -58,15 +47,6 @@ export function createMeter(key) {
 
     return { voltage, current, power, apparent, reactive, pf, energy, frequency: 50 + noise(0.02), seed };
   };
-}
-
-export function classify(dp) {
-  const descr = dp.description.toLowerCase();
-  const [quantity, factor] = descr.includes('power factor')
-    ? ['pf', 1]
-    : UNITS[dp.units.trim().toLowerCase()] ?? ['generic', 1];
-  const phase = Number(descr.match(/\b(?:phase|l)\s*([123])\b/)?.[1]) || 0;
-  return { quantity, factor, phase, isExport: descr.includes('export'), isAverage: descr.includes('average') };
 }
 
 function physicalValue(m, kind, t, startAddr) {

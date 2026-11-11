@@ -1,5 +1,5 @@
 const FLUSH_MS = 1000;
-const HEARTBEAT_MS = 15_000;
+const HEARTBEAT_MS = 5000;
 const MAX_BUFFERED = 256 * 1024;
 
 const format = (event, data) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -13,8 +13,9 @@ export class LiveHub {
     this.values = {};
     this.events = new Map();
     setInterval(() => this.flush(), FLUSH_MS).unref();
-    // Lets both sides notice a dead connection (unplugged cable, sleeping laptop)
-    setInterval(() => this.broadcast(': ping\n\n'), HEARTBEAT_MS).unref();
+    // Lets both sides notice a dead connection (unplugged cable, sleeping laptop).
+    // A real event, not an SSE comment, because EventSource hides comments from JS.
+    setInterval(() => this.broadcast(format('ping', Date.now())), HEARTBEAT_MS).unref();
   }
 
   attach(req, res) {

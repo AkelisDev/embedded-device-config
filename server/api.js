@@ -1,7 +1,7 @@
 import { json as sendJson, readBody, assertValid, HttpError } from './http.js';
 import { parseConfig } from '../shared/convert.js';
 import { checkChannel, checkStation, checkDatapoints } from '../shared/validate.js';
-import { nextId } from '../shared/modbus.js';
+import { nextId, SERIAL_PORTS } from '../shared/modbus.js';
 
 const CHANNEL_FIELDS = [
   'name', 'enabled', 'host', 'port', 'serialPort', 'baudrate', 'parity', 'stopbits', 'bytesize',
@@ -11,7 +11,7 @@ const CHANNEL_FIELDS = [
 const DEFAULTS = {
   common: { enabled: false, requestRetries: 3, requestTimeout: 2000, connectRetries: 3, connectTimeout: 5000 },
   tcp: { host: '192.168.1.10', port: 502 },
-  rtu: { serialPort: '/dev/ttyS0', baudrate: 9600, parity: 'N', stopbits: 1, bytesize: 8 },
+  rtu: { serialPort: SERIAL_PORTS[0], baudrate: 9600, parity: 'N', stopbits: 1, bytesize: 8 },
 };
 
 function pick(obj, keys) {
