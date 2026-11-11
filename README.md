@@ -23,7 +23,7 @@ Env: `PORT`, `CONFIG` (config file path), `SIM_OUTAGES=0` (no simulated meter ou
 
 ## Web UI
 
-- Vue 3 + Vite, no UI library, about 36 KB gzipped.
+- Vue 3 + Vite, no UI library. Main bundle about 45 KB gzipped, the Monitor tab with uPlot is a separate 26 KB chunk loaded on first use.
 - Overview: per station status, last value time, failed reads, V and I per phase, total power, energy. Registers are matched by units and description. A value older than 3 cycles is marked stale.
 - Forms use the same validation as the server (`shared/`).
 - Edits are drafts in localStorage until saved. Changes made on the device are merged per field, a clash on the same field asks the user.
@@ -39,3 +39,13 @@ Env: `PORT`, `CONFIG` (config file path), `SIM_OUTAGES=0` (no simulated meter ou
 - Import: paste from Excel or load CSV. Columns are matched by header name or taken in a fixed order. Delimiter (tab, `;` or `,`), decimal comma, type aliases and 30001/40001 notation are detected. Preview with row errors; import is blocked until they're fixed.
 - Validation from `shared/validate.js`: overlaps within one function code, bad values. Shown per cell and in a list. Save is blocked while there are errors.
 - The whole map is one draft and saved with one PUT. About 90 ms per keystroke at 1000 registers.
+
+## Monitor
+
+- Latest values of the station grouped by voltage, current, power, energy and other, with units and the stale marker.
+- Charts with uPlot: one chart per unit, so different units never share an axis. Up to 8 registers; the three phase voltages are selected by default, and the choice is remembered per station.
+- Ranges 5 min / 15 min / 1 h from `/api/history`. Up to 15 min: raw samples. 1 h: per-minute average line with a min-max band.
+- After loading, the chart is updated from the SSE stream; history is fetched again only when the range or selection changes.
+- 1 h: `/api/history` also returns `open: {sum, count, last}` for the minute still filling; the client continues it from live values, skipping samples up to `last`. Exact for cycles of 1 s and up; SSE sends one value per register per second, so faster registers are averaged over those.
+- A gap longer than 2.5 sample steps is drawn as a gap, both in history and live.
+- Min / max / avg for the visible range, the current value and the value at the cursor are shown under each chart.

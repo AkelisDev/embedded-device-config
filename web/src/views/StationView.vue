@@ -1,10 +1,14 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue';
 import { links, type StationTab } from '../router';
 import { stationState } from '../live';
 import StateBadge from '../components/StateBadge.vue';
 import StationSettings from '../components/StationSettings.vue';
 import RegistersTab from '../components/registers/RegistersTab.vue';
 import { draftKeys, hasDraft } from '../drafts';
+
+// Loaded on first use, so uPlot isn't part of the main bundle
+const MonitorTab = defineAsyncComponent(() => import('../components/monitor/MonitorTab.vue'));
 import type { Channel, Station } from '../types';
 
 defineProps<{ channel: Channel; station: Station; tab: StationTab }>();
@@ -36,7 +40,7 @@ const TABS: { id: StationTab; label: string }[] = [
 
     <StationSettings v-if="tab === 'settings'" :key="station.id" :channel="channel" :station="station" />
     <RegistersTab v-else-if="tab === 'registers'" :key="station.id" :channel="channel" :station="station" />
-    <p v-else class="empty">The monitor view is not built yet.</p>
+    <MonitorTab v-else :key="station.id" :channel="channel" :station="station" />
   </div>
 </template>
 

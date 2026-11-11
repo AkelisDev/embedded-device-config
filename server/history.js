@@ -68,11 +68,12 @@ class Series {
       this.minutes.push(this.bucket.start, closeBucket(this.bucket));
       this.bucket = null;
     }
-    this.bucket ??= { start, min: v, max: v, sum: 0, count: 0 };
+    this.bucket ??= { start, min: v, max: v, sum: 0, count: 0, last: t };
     this.bucket.min = Math.min(this.bucket.min, v);
     this.bucket.max = Math.max(this.bucket.max, v);
     this.bucket.sum += v;
     this.bucket.count++;
+    this.bucket.last = t;
   }
 
   rawSince(from) {
@@ -85,6 +86,9 @@ class Series {
       const open = closeBucket(this.bucket);
       out.t.push(this.bucket.start);
       for (const c of ['min', 'max', 'avg']) out[c].push(open[c]);
+      // Lets the client keep averaging the open minute exactly from live values
+      const { sum, count, last } = this.bucket;
+      out.open = { sum, count, last };
     }
     return out;
   }
