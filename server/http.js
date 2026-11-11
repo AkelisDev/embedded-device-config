@@ -6,8 +6,8 @@ export class HttpError extends Error {
   }
 }
 
-export function json(res, status, body) {
-  res.writeHead(status, { 'Content-Type': 'application/json' });
+export function json(res, status, body, headers = {}) {
+  res.writeHead(status, { 'Content-Type': 'application/json', ...headers });
   res.end(body === undefined ? '' : JSON.stringify(body));
 }
 
