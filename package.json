@@ -1,0 +1,8 @@
+{
+  "name": "embedded-device-config",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js"
+  }
+}

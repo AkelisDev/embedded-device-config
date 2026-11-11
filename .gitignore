@@ -1,0 +1,6 @@
+node_modules
+web/dist
+data/*.bak
+data/*.tmp
+BRIEF.md
+TASK.md
