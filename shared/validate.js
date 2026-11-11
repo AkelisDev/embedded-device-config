@@ -39,6 +39,21 @@ export function checkChannel(ch) {
   return errors;
 }
 
+// A whole config, e.g. a file to import. "where" names the channel and
+// station, because ids mean nothing to someone reading an import report.
+export function checkConfig(channels) {
+  const errors = [];
+  const ids = new Set();
+  for (const ch of channels) {
+    const add = (list, where, prefix) => list.forEach((e) => errors.push({ ...e, field: `${prefix}.${e.field}`, where }));
+    if (ids.has(ch.id)) errors.push({ field: `${ch.id}.channelId`, where: ch.name, message: `Duplicate channel id ${ch.channelId}` });
+    ids.add(ch.id);
+    add(checkChannel(ch), ch.name, ch.id);
+    for (const st of ch.stations) add(checkStation(st), `${ch.name} / ${st.name}`, `${ch.id}/${st.id}`);
+  }
+  return errors;
+}
+
 export function checkStation(st) {
   const errors = [];
   if (!st.name?.trim()) errors.push({ field: 'name', message: 'Name is required' });

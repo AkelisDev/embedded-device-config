@@ -107,6 +107,11 @@ function writeChannel(c) {
 }
 
 export function parseConfig(file) {
+  const lists = [file?.modbus_tcp, file?.modbus_ser];
+  // Otherwise any JSON file would import as an empty config and wipe the device
+  if (lists.every((l) => l === undefined) || lists.some((l) => l !== undefined && !Array.isArray(l))) {
+    throw new Error('Not a gateway config: expected modbus_tcp and modbus_ser lists');
+  }
   const tcp = (file.modbus_tcp ?? []).map((c) => readChannel(c, 'tcp'));
   const rtu = (file.modbus_ser ?? []).map((c) => readChannel(c, 'rtu'));
   return [...tcp, ...rtu];

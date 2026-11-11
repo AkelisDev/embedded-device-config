@@ -42,8 +42,9 @@ export interface NewStation {
   copyFrom?: { channelId: string; stationId: string };
 }
 
-export const createStation = (cid: string, station: NewStation) =>
-  mutate<Station>('POST', `/channels/${cid}/stations`, station);
+// Several stations in one request, so either all are created or none
+export const createStations = (cid: string, stations: NewStation[]) =>
+  mutate<Station[]>('POST', `/channels/${cid}/stations`, stations);
 
 export const saveStation = (cid: string, sid: string, fields: Partial<Station>) =>
   mutate<Station>('PUT', `/channels/${cid}/stations/${sid}`, fields);

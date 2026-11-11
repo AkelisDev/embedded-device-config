@@ -1,6 +1,6 @@
 import { json as sendJson, readBody, assertValid, HttpError } from './http.js';
 import { parseConfig } from '../shared/convert.js';
-import { checkChannel, checkStation, checkDatapoints } from '../shared/validate.js';
+import { checkChannel, checkStation, checkDatapoints, checkConfig } from '../shared/validate.js';
 import { nextId, SERIAL_PORTS } from '../shared/modbus.js';
 
 const CHANNEL_FIELDS = [
@@ -79,21 +79,26 @@ export function createApi(store) {
     json(res, 204);
   }
 
+  // An array creates several stations at once: all are checked together and
+  // saved in one write, so a clash on the 5th doesn't leave the first 4 behind.
   async function createStation(req, res, cid) {
     const ch = getChannel(cid);
     const body = await readBody(req);
+    const items = Array.isArray(body) ? body : [body];
 
-    let datapoints = body.datapoints ?? [];
-    if (body.copyFrom) {
-      datapoints = structuredClone(getStation(body.copyFrom.channelId, body.copyFrom.stationId).datapoints);
+    const created = [];
+    for (const item of items) {
+      let datapoints = item.datapoints ?? [];
+      if (item.copyFrom) {
+        datapoints = structuredClone(getStation(item.copyFrom.channelId, item.copyFrom.stationId).datapoints);
+      }
+      created.push({ id: nextId([...ch.stations, ...created]), name: item.name, address: item.address, datapoints });
     }
+    assertValid([...created.flatMap(checkStation), ...checkChannel({ ...ch, stations: [...ch.stations, ...created] })]);
 
-    const st = { id: nextId(ch.stations), name: body.name, address: body.address, datapoints };
-    assertValid([...checkStation(st), ...checkChannel({ ...ch, stations: [...ch.stations, st] })]);
-
-    ch.stations.push(st);
+    ch.stations.push(...created);
     await store.save();
-    json(res, 201, st);
+    json(res, 201, Array.isArray(body) ? created : created[0]);
   }
 
   async function updateStation(req, res, cid, sid) {
@@ -139,15 +144,14 @@ export function createApi(store) {
   }
 
   async function importConfig(req, res) {
-    const channels = parseConfig(await readBody(req, 5_000_000));
-    const errors = [];
-    for (const ch of channels) {
-      for (const e of checkChannel(ch)) errors.push({ ...e, field: `${ch.id}.${e.field}` });
-      for (const st of ch.stations) {
-        for (const e of checkStation(st)) errors.push({ ...e, field: `${ch.id}/${st.id}.${e.field}` });
-      }
+    const body = await readBody(req, 5_000_000);
+    let channels;
+    try {
+      channels = parseConfig(body);
+    } catch (e) {
+      throw new HttpError(400, e.message);
     }
-    assertValid(errors);
+    assertValid(checkConfig(channels));
 
     store.channels = channels;
     await store.save();

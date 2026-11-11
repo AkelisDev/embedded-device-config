@@ -51,6 +51,13 @@ export const draftKeys = {
 
 export const hasDraft = (...keys: string[]) => keys.some((k) => k in drafts);
 
+export const draftCount = () => Object.keys(drafts).length;
+
+// After a config import the drafts describe channels and stations that were replaced
+export function discardAllDrafts() {
+  for (const k of Object.keys(drafts)) delete drafts[k];
+}
+
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 // structuredClone refuses Vue proxies
 const clone = <T>(v: T): T => (v === undefined ? v : JSON.parse(JSON.stringify(v)));

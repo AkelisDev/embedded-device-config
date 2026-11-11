@@ -59,6 +59,8 @@ export interface ChannelStatus {
 export interface FieldError {
   field: string;
   message: string;
+  // Channel / station name, set when a whole config is checked
+  where?: string;
 }
 
 // [timestamp ms, value]

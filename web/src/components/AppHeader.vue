@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { live } from '../live';
 import { config } from '../config';
+import ConfigImport from './ConfigImport.vue';
 </script>
 
 <template>
@@ -11,7 +12,10 @@ import { config } from '../config';
     </span>
     <span class="spacer" />
     <!-- Worth having before changing anything on site -->
-    <a v-if="config.loaded" class="button" href="/api/export" download>Download config backup</a>
+    <template v-if="config.loaded">
+      <ConfigImport />
+      <a class="button" href="/api/export" download>Download config backup</a>
+    </template>
   </header>
 </template>
 
@@ -39,7 +43,8 @@ import { config } from '../config';
 }
 .link.offline { background: var(--bad); }
 .spacer { flex: 1; }
-.button {
+/* :deep so the import button in ConfigImport gets the same look */
+.app-header :deep(.button) {
   color: inherit;
   border-color: rgba(255, 255, 255, 0.4);
   background: transparent;
