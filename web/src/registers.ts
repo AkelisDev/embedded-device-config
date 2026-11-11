@@ -23,7 +23,7 @@ export function fromModbusAddress(n: number): { funcCode: number; startAddr: num
   return null;
 }
 
-export const DEFAULT_REGISTER: Omit<Datapoint, 'id'> = {
+const DEFAULT_REGISTER: Omit<Datapoint, 'id'> = {
   description: '',
   startAddr: 0,
   dataType: 'float32',

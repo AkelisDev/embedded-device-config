@@ -54,7 +54,7 @@ export function connectLive() {
   on('ping', () => {});
 }
 
-export const channelStatus = (cid: string) => live.status.find((c) => c.id === cid);
+const channelStatus = (cid: string) => live.status.find((c) => c.id === cid);
 export const stationStatus = (cid: string, sid: string) => channelStatus(cid)?.stations.find((s) => s.id === sid);
 
 // While disconnected the last known status would be a guess, so don't show it

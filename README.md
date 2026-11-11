@@ -14,6 +14,76 @@ Development: `npm start` and `npm run dev` (Vite, proxies `/api` to 8080).
 
 Env: `PORT`, `CONFIG` (config file path), `SIM_OUTAGES=0` (no simulated meter outages).
 
+Building needs Node 20.19+ or 22.12+ (Vite 8). Running the built server needs Node 18+.
+
+## Architecture
+
+```
+ browser (Vue, drafts in localStorage)
+    |  REST /api/*  (ETag / If-Match)      SSE /api/values/stream
+    v                                        ^
+ node:http server -------------------------------------------------
+    api.js / monitor-api.js    static.js (web/dist, .gz)
+    store.js  <- shared/convert.js, shared/validate.js
+    simulator.js -> status.js, history.js, live.js
+    |
+ data/modbus_config.json  (device format, written atomically)
+```
+
+- One Node process, no dependencies: REST API, SSE and the built UI.
+- The config file keeps the device's own format (every value a string, device key order). `shared/convert.js` converts at the API, so firmware can keep reading the file unchanged.
+- `shared/validate.js` is used by the server and the UI: the same rules and messages in forms, in the register table and on save.
+- `simulator.js` stands in for the Modbus poller and emits the same `poll` results a real one would. Status, history and live values don't know the difference.
+- History in fixed-size ring buffers, live values over SSE once a second.
+- Config revision (hash of the file) as ETag. A save carries `If-Match`, a stale one gets 409.
+
+## Register mapping workflow
+
+From an empty station to hundreds of registers without retyping:
+
+1. New station: copy the map from an existing one (the usual case, identical meters on one bus).
+2. Or generate a range: start address, count, type, FC, cycle; addresses and `Register {n}` descriptions are filled in.
+3. Or paste from Excel / load CSV from the meter manual: headers matched by name, 30001/40001 notation and decimal comma understood, preview with row errors before anything is added.
+4. Bulk edit: shift-click a range, set cycle, byte order, FC, type, scale or units for all of them.
+5. Validation (overlaps per FC, bad values) shows in the table while editing. Save sends the whole map in one PUT, only when there are no errors.
+
+## Industrial usability
+
+- For an engineer on a short site visit with a laptop on the local network, often without internet. Everything is served by the device, no CDN.
+- Overview first: which meters talk, last value time, failed reads, V / I per phase, power, energy.
+- Status per channel and station (OK, timeout, partial, disabled). Values older than 3 cycles are marked stale, not shown as current.
+- Addresses in 0-based and 30001/40001 notation, as in meter manuals.
+- Fixed values are dropdowns: serial port, baud rate, parity, byte size, stop bits, data type, FC, byte order.
+- RS-485 is one request at a time: channel settings show how long a silent meter holds the bus (timeout × (retries + 1), 8 s in the example config).
+- Drafts survive a reload and a lost connection. Changes made meanwhile on the device are merged per field; saving is blocked while offline.
+- "Download config backup" in the header, before changing anything.
+
+## Embedded resource constraints
+
+- Server: no runtime dependencies, release is 170 KB.
+- UI: 45 KB gzipped; uPlot and the Monitor tab are a 26 KB chunk loaded on first use. Files are gzipped at build time, nothing is compressed on the device. Hashed assets are cached for a year.
+- History memory is fixed: allocated per register when the config is loaded, it never grows.
+- Few requests: config loaded once, then one SSE message per second with all changed values and a 5 s ping. History fetched only when the chart range or selection changes.
+- Config written only on save, atomically (temp file + rename, `.bak`), so flash is rarely written.
+- Measured RSS is about 55 MB; most of it is Node itself, not this code. The API is small enough to port to Go or C, which would likely run in a few MB, without changing the UI.
+
+## Edge cases
+
+- Power cut during save: the temp file is renamed over the config only after it's fully written, so the old or the new file survives, never a broken one. The previous version is kept as `.bak`.
+- Power cut and history: RAM history is lost, it's a short diagnostic buffer. Keeping it would mean writing summaries to flash, which wears it out. Ride-through (battery, supercap) is a hardware question.
+- Internet / cloud down: the device and the local UI don't need either. Buffering data for the cloud uplink is the gateway's job and not part of this.
+- Browser loses the connection: banner within 12 s, status shown as Unknown, saving blocked, drafts kept. On reconnect the config revision is checked and device changes are merged.
+- Meter not answering: that station goes to timeout and its values go stale, the chart shows a gap; other stations keep working.
+
+## Assumptions and not done
+
+- Assumed: the gateway firmware reads `modbus_config.json` as is and picks up changes on its own; the UI is used locally by one engineer at a time (revision check covers the rare second one); Node 18+ is available on the device.
+- No real Modbus: values come from the simulator.
+- No authentication or TLS. Fine on an isolated site LAN; needed before the UI is ever reachable remotely.
+- No undo/redo or fill-down in the register table; drafts and Discard cover most mistakes.
+- No long-term history on the device: one hour in RAM, the cloud keeps the rest.
+- `POST /api/import` exists, the UI only has the backup download.
+
 ## Monitoring
 
 - Simulated poller: one timer per station and acquisition cycle. Values come from a 3-phase meter model, with scale, units and data type applied. Meters drop out at random to exercise timeouts.
