@@ -59,7 +59,7 @@ const isStationActive = (cid: string, sid: string) =>
           <StateBadge :state="stationState(ch.id, st.id)" dot />
           <span class="name">{{ st.name }}</span>
           <span class="addr">{{ st.address }}</span>
-          <span v-if="hasDraft(draftKeys.station(ch.id, st.id))" class="unsaved" title="Unsaved changes">●</span>
+          <span v-if="hasDraft(draftKeys.station(ch.id, st.id), draftKeys.registers(ch.id, st.id))" class="unsaved" title="Unsaved changes">●</span>
         </a>
       </div>
     </section>

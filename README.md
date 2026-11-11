@@ -1,7 +1,41 @@
+# embedded-device-config
+
+Configuration and monitoring UI for a Modbus RTU/TCP gateway.
+
+## Run
+
+```
+npm install
+npm run build
+npm start            # http://localhost:8080
+```
+
+Development: `npm start` and `npm run dev` (Vite, proxies `/api` to 8080).
+
+Env: `PORT`, `CONFIG` (config file path), `SIM_OUTAGES=0` (no simulated meter outages).
+
 ## Monitoring
 
-Monitoring. There’s no real Modbus communication, so a simulator takes the poller’s place. It reads each station’s registers in groups by acquisition cycle, like a real gateway, and produces believable values: voltage around 230 V, a changing load, power that matches voltage and current, and energy counters that only go up. Scale, units and data type are applied the same way as for a real register. Now and then a meter stops answering, so the timeout handling can be seen: that station is marked as timed out, its values go stale, and the other meters keep working.
+- Simulated poller: one timer per station and acquisition cycle. Values come from a 3-phase meter model, with scale, units and data type applied. Meters drop out at random to exercise timeouts.
+- Live values over SSE (`/api/values/stream`), batched once per second.
+- History in fixed-size RAM ring buffers: 15 min raw, 60 min as 1-min min/max/avg. About 16 KB per 1 s register. Lost on reboot, long-term history is the cloud's job.
+- Config revision is sent as ETag. A save with an outdated `If-Match` gets 409.
 
-The browser gets the latest values over Server-Sent Events, once per second in a single message. Recent history is kept in a fixed-size RAM buffer: the last 15 minutes at full resolution and the last hour as per-minute min/max/avg. That’s roughly 16 KB for a register read every second and less for slower ones, and memory doesn’t grow while running. History is lost on reboot, which is fine for a short diagnostic view: long-term history belongs in the cloud, and constant writes would wear out the flash.
+## Web UI
 
-Every config response carries a revision. The UI sends it back when saving, and if the config changed in the meantime (from another laptop, or while the browser was disconnected), the save is refused instead of overwriting the newer version.
+- Vue 3 + Vite, no UI library, about 36 KB gzipped.
+- Overview: per station status, last value time, failed reads, V and I per phase, total power, energy. Registers are matched by units and description. A value older than 3 cycles is marked stale.
+- Forms use the same validation as the server (`shared/`).
+- Edits are drafts in localStorage until saved. Changes made on the device are merged per field, a clash on the same field asks the user.
+- When the connection is lost: banner, status Unknown, saving blocked.
+
+## Registers
+
+- Table sorted by address, showing the 0-based address and 30001/40001 notation. Search by description, units or address. Filter by function code and data type.
+- Inline editing. Register size follows from the data type.
+- Multi-select (shift-click for a range). Bulk set cycle, byte order, function code, data type, scale or units. Bulk delete.
+- Generate range: start, count, type, FC, cycle. Addresses are calculated, description from a pattern (`Register {n}`, `{addr}`, `{modbus}`).
+- Copy the map from another station, replacing or appending.
+- Import: paste from Excel or load CSV. Columns are matched by header name or taken in a fixed order. Delimiter (tab, `;` or `,`), decimal comma, type aliases and 30001/40001 notation are detected. Preview with row errors; import is blocked until they're fixed.
+- Validation from `shared/validate.js`: overlaps within one function code, bad values. Shown per cell and in a list. Save is blocked while there are errors.
+- The whole map is one draft and saved with one PUT. About 90 ms per keystroke at 1000 registers.

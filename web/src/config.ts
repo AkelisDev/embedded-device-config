@@ -1,6 +1,6 @@
 import { reactive } from 'vue';
 import { request } from './api';
-import type { Channel, ChannelType, Station } from './types';
+import type { Channel, ChannelType, Datapoint, Station } from './types';
 
 export const config = reactive({
   channels: [] as Channel[],
@@ -47,5 +47,9 @@ export const createStation = (cid: string, station: NewStation) =>
 
 export const saveStation = (cid: string, sid: string, fields: Partial<Station>) =>
   mutate<Station>('PUT', `/channels/${cid}/stations/${sid}`, fields);
+
+// The whole map in one request: bulk edits and imports are one validation and one write
+export const saveRegisters = (cid: string, sid: string, datapoints: Datapoint[]) =>
+  mutate<Datapoint[]>('PUT', `/channels/${cid}/stations/${sid}/datapoints`, datapoints);
 
 export const deleteStation = (cid: string, sid: string) => mutate('DELETE', `/channels/${cid}/stations/${sid}`);

@@ -189,3 +189,29 @@ section.danger {
 
 .empty { color: var(--muted); }
 .form-error { color: var(--bad); }
+
+.panel {
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.panel h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+.panel .row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 8px;
+}
+.panel .actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+.muted { color: var(--muted); }

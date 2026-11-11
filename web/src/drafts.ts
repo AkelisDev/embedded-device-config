@@ -23,21 +23,30 @@ function restore(): Record<string, Draft> {
 
 export const drafts = reactive<Record<string, Draft>>(restore());
 
+function persist() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
+  } catch {
+    // Private mode or full storage: drafts still work until the tab closes
+  }
+}
+
+// Written after typing pauses: a register map can be hundreds of rows
+let persistTimer: ReturnType<typeof setTimeout> | undefined;
 watch(
   drafts,
   () => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
-    } catch {
-      // Private mode or full storage: drafts still work until the tab closes
-    }
+    clearTimeout(persistTimer);
+    persistTimer = setTimeout(persist, 400);
   },
   { deep: true },
 );
+addEventListener('pagehide', persist);
 
 export const draftKeys = {
   channel: (cid: string) => `channel:${cid}`,
   station: (cid: string, sid: string) => `station:${cid}/${sid}`,
+  registers: (cid: string, sid: string) => `registers:${cid}/${sid}`,
 };
 
 export const hasDraft = (...keys: string[]) => keys.some((k) => k in drafts);
@@ -96,7 +105,8 @@ export function useDraft<T extends object>(key: () => string, source: () => T | 
       if (!value || !current) return;
       const k = key();
       if (same(value, current)) delete drafts[k];
-      else if (drafts[k]) drafts[k].value = clone(value);
+      // The form object itself, not a copy: cloning a large map per keystroke is slow
+      else if (drafts[k]) drafts[k].value = value;
       else drafts[k] = { base: clone(current), value: clone(value) };
     },
     { deep: true },
